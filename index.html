@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Yu Lab 引物匹配器</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Yu Lab 引物匹配器</h1>
+        <div class="subline" id="libraryMeta">引物库载入中</div>
+      </div>
+      <nav class="tabs" aria-label="views">
+        <button class="tab active" data-tab="match">匹配</button>
+        <button class="tab" data-tab="library">引物库</button>
+        <button class="tab" data-tab="update">更新</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="view active" id="view-match">
+        <div class="match-grid">
+          <section class="panel sequence-panel">
+            <div class="panel-head">
+              <h2>输入序列</h2>
+              <div class="inline-actions">
+                <button id="clearSequenceBtn" type="button">清空</button>
+              </div>
+            </div>
+            <label class="field">
+              <span>名称</span>
+              <input id="sequenceName" type="text" value="Input sequence" />
+            </label>
+            <label class="field grow">
+              <span>FASTA / DNA</span>
+              <textarea id="sequenceInput" spellcheck="false"></textarea>
+            </label>
+          </section>
+
+          <aside class="panel settings-panel">
+            <div class="panel-head">
+              <h2>参数</h2>
+            </div>
+            <label class="field">
+              <span>允许错配</span>
+              <select id="mismatchSelect">
+                <option value="0">0</option>
+                <option value="1">1</option>
+                <option value="2" selected>2</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>结果上限</span>
+              <input id="resultLimit" type="number" min="100" step="100" value="5000" />
+            </label>
+            <button id="runMatchBtn" class="primary" type="button">开始匹配</button>
+            <div class="metric-grid" aria-label="summary">
+              <div class="metric"><span>序列长度</span><strong id="metricSeqLen">0 bp</strong></div>
+              <div class="metric"><span>可匹配引物</span><strong id="metricPrimerCount">0</strong></div>
+              <div class="metric"><span>命中数</span><strong id="metricHitCount">0</strong></div>
+              <div class="metric"><span>状态</span><strong id="metricStatus">待匹配</strong></div>
+            </div>
+          </aside>
+        </div>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>位置总览</h2>
+            <div class="legend">
+              <span><i class="swatch exact"></i>0</span>
+              <span><i class="swatch one"></i>1</span>
+              <span><i class="swatch two"></i>2</span>
+              <span><i class="arrow-label">→</i>同向</span>
+              <span><i class="arrow-label">←</i>反向互补</span>
+            </div>
+          </div>
+          <div class="track-wrap"><canvas id="overviewCanvas" height="128"></canvas></div>
+        </section>
+
+        <section class="results-layout">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>命中列表</h2>
+              <input id="resultFilter" type="search" placeholder="筛选名称 / Box" />
+            </div>
+            <div class="table-wrap results-table-wrap">
+              <table>
+                <thead><tr><th>引物</th><th>方向</th><th>位置</th><th>错配</th><th>Box</th><th>Tm</th></tr></thead>
+                <tbody id="resultsBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <aside class="panel detail-panel">
+            <div class="panel-head"><h2>命中细节</h2></div>
+            <div id="hitDetail" class="detail-empty">暂无选中命中</div>
+          </aside>
+        </section>
+      </section>
+
+      <section class="view" id="view-library">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>引物库</h2>
+            <div class="inline-actions">
+              <input id="primerFilter" type="search" placeholder="筛选名称 / 序列 / Box" />
+              <button id="exportCsvBtn" type="button">导出 CSV</button>
+              <button id="exportJsonBtn" type="button">导出 JSON</button>
+            </div>
+          </div>
+          <div class="table-wrap library-table-wrap">
+            <table>
+              <thead><tr><th>name</th><th>sequence 5'-3'</th><th>Box</th><th>Tm</th><th>remarks</th><th></th></tr></thead>
+              <tbody id="primerBody"></tbody>
+            </table>
+          </div>
+          <div class="table-foot" id="primerTableFoot"></div>
+        </section>
+      </section>
+
+      <section class="view" id="view-update">
+        <div class="update-grid">
+          <section class="panel">
+            <div class="panel-head"><h2>新增 / 编辑</h2><button id="newPrimerBtn" type="button">新建</button></div>
+            <form id="primerForm">
+              <input id="editPrimerId" type="hidden" />
+              <label class="field"><span>name</span><input id="primerName" type="text" required /></label>
+              <label class="field"><span>sequence 5'-3'</span><input id="primerSequence" type="text" /></label>
+              <label class="field"><span>Box</span><input id="primerBox" type="text" /></label>
+              <label class="field"><span>Tm</span><input id="primerTm" type="text" /></label>
+              <label class="field"><span>remarks</span><textarea id="primerRemarks"></textarea></label>
+              <div class="form-actions"><button class="primary" type="submit">保存</button><button id="deletePrimerBtn" class="danger" type="button">删除</button></div>
+            </form>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2>从 Excel 粘贴</h2>
+              <div class="inline-actions"><button id="mergePasteBtn" type="button">合并更新</button><button id="replacePasteBtn" type="button">替换全部</button></div>
+            </div>
+            <textarea id="pasteBox" class="paste-box" spellcheck="false"></textarea>
+            <div id="pasteStatus" class="status-line"></div>
+          </section>
+
+          <section class="panel github-panel">
+            <div class="panel-head">
+              <h2>发布到 GitHub</h2>
+              <a class="text-link" href="https://github.com/YanWang-whu/Yu-Jin-Lab-Database/blob/main/primer_library.json" target="_blank" rel="noreferrer">查看线上库</a>
+            </div>
+            <label class="field"><span>GitHub token</span><input id="githubToken" type="password" autocomplete="off" placeholder="fine-grained token with Contents: Read and write" /></label>
+            <label class="field"><span>提交说明</span><input id="githubCommitMessage" type="text" value="Update primer library" /></label>
+            <button id="publishGithubBtn" class="primary" type="button">提交当前引物库</button>
+            <div id="githubPublishStatus" class="status-line"></div>
+          </section>
+        </div>
+
+        <section class="panel">
+          <div class="panel-head"><h2>库状态</h2><div class="inline-actions"><button id="resetLibraryBtn" type="button">恢复内置库</button></div></div>
+          <div class="metric-grid wide">
+            <div class="metric"><span>总记录</span><strong id="libraryTotal">0</strong></div>
+            <div class="metric"><span>有序列</span><strong id="libraryWithSeq">0</strong></div>
+            <div class="metric"><span>空序列</span><strong id="libraryWithoutSeq">0</strong></div>
+            <div class="metric"><span>来源</span><strong id="librarySource">内置库</strong></div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
