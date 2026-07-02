@@ -3,167 +3,282 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Yu Lab 引物匹配器</title>
+    <title>Yu-Jin Lab Database</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="topbar">
+    <header class="app-header">
       <div>
-        <h1>Yu Lab 引物匹配器</h1>
-        <div class="subline" id="libraryMeta">引物库载入中</div>
+        <h1>Yu-Jin Lab Database</h1>
+        <p id="databaseMeta">数据库载入中</p>
       </div>
-      <nav class="tabs" aria-label="views">
-        <button class="tab active" data-tab="match">匹配</button>
-        <button class="tab" data-tab="library">引物库</button>
-        <button class="tab" data-tab="update">更新</button>
-      </nav>
+      <div class="publish-strip">
+        <input id="githubToken" type="password" autocomplete="off" placeholder="GitHub token" />
+        <input id="commitMessage" type="text" value="Update lab database" />
+        <button id="publishDatabaseBtn" class="primary" type="button">提交当前数据库</button>
+      </div>
     </header>
 
     <main>
-      <section class="view active" id="view-match">
-        <div class="match-grid">
-          <section class="panel sequence-panel">
-            <div class="panel-head">
-              <h2>输入序列</h2>
-              <div class="inline-actions">
-                <button id="clearSequenceBtn" type="button">清空</button>
-              </div>
-            </div>
-            <label class="field">
-              <span>名称</span>
-              <input id="sequenceName" type="text" value="Input sequence" />
-            </label>
-            <label class="field grow">
-              <span>FASTA / DNA</span>
-              <textarea id="sequenceInput" spellcheck="false"></textarea>
-            </label>
-          </section>
+      <section class="toolbar">
+        <div class="segmented" id="labTabs" aria-label="lab selector"></div>
+        <div class="segmented" id="moduleTabs" aria-label="module selector"></div>
+      </section>
 
-          <aside class="panel settings-panel">
-            <div class="panel-head">
-              <h2>参数</h2>
-            </div>
-            <label class="field">
-              <span>允许错配</span>
-              <select id="mismatchSelect">
-                <option value="0">0</option>
-                <option value="1">1</option>
-                <option value="2" selected>2</option>
-              </select>
-            </label>
-            <label class="field">
-              <span>结果上限</span>
-              <input id="resultLimit" type="number" min="100" step="100" value="5000" />
-            </label>
-            <button id="runMatchBtn" class="primary" type="button">开始匹配</button>
-            <div class="metric-grid" aria-label="summary">
-              <div class="metric"><span>序列长度</span><strong id="metricSeqLen">0 bp</strong></div>
-              <div class="metric"><span>可匹配引物</span><strong id="metricPrimerCount">0</strong></div>
-              <div class="metric"><span>命中数</span><strong id="metricHitCount">0</strong></div>
-              <div class="metric"><span>状态</span><strong id="metricStatus">待匹配</strong></div>
-            </div>
-          </aside>
-        </div>
+      <section class="status-line" id="statusLine"></section>
 
+      <section class="module active" id="primerModule">
         <section class="panel">
           <div class="panel-head">
-            <h2>位置总览</h2>
-            <div class="legend">
-              <span><i class="swatch exact"></i>0</span>
-              <span><i class="swatch one"></i>1</span>
-              <span><i class="swatch two"></i>2</span>
-              <span><i class="arrow-label">→</i>同向</span>
-              <span><i class="arrow-label">←</i>反向互补</span>
+            <div>
+              <h2>引物匹配</h2>
+              <p>粘贴 DNA/FASTA 序列，查找当前实验室引物库中的匹配引物。</p>
+            </div>
+            <div class="inline-controls">
+              <label>允许错配
+                <select id="primerMismatch">
+                  <option value="0">0</option>
+                  <option value="1">1</option>
+                  <option value="2" selected>2</option>
+                </select>
+              </label>
+              <button id="runPrimerSearchBtn" class="primary" type="button">开始匹配</button>
             </div>
           </div>
-          <div class="track-wrap"><canvas id="overviewCanvas" height="128"></canvas></div>
+          <div class="two-col">
+            <label class="field">
+              <span>序列名称</span>
+              <input id="primerQueryName" type="text" value="Input sequence" />
+            </label>
+            <label class="field">
+              <span>筛选引物库</span>
+              <input id="primerFilter" type="search" placeholder="名称 / 序列 / Box / 备注" />
+            </label>
+          </div>
+          <label class="field">
+            <span>FASTA / DNA</span>
+            <textarea id="primerSequenceInput" class="sequence-box" spellcheck="false"></textarea>
+          </label>
+          <div class="metric-grid">
+            <div><span>当前引物</span><strong id="primerCount">0</strong></div>
+            <div><span>可匹配</span><strong id="primerSearchableCount">0</strong></div>
+            <div><span>输入长度</span><strong id="primerQueryLength">0 bp</strong></div>
+            <div><span>命中</span><strong id="primerHitCount">0</strong></div>
+          </div>
         </section>
 
-        <section class="results-layout">
+        <section class="grid-2">
           <section class="panel">
             <div class="panel-head">
               <h2>命中列表</h2>
-              <input id="resultFilter" type="search" placeholder="筛选名称 / Box" />
+              <button id="exportPrimerJsonBtn" type="button">导出引物 JSON</button>
             </div>
-            <div class="table-wrap results-table-wrap">
+            <div class="table-wrap">
               <table>
-                <thead><tr><th>引物</th><th>方向</th><th>位置</th><th>错配</th><th>Box</th><th>Tm</th></tr></thead>
-                <tbody id="resultsBody"></tbody>
+                <thead>
+                  <tr>
+                    <th>引物</th>
+                    <th>方向</th>
+                    <th>位置</th>
+                    <th>错配</th>
+                    <th>Box</th>
+                    <th>Tm</th>
+                  </tr>
+                </thead>
+                <tbody id="primerHitsBody"></tbody>
               </table>
             </div>
           </section>
-
-          <aside class="panel detail-panel">
-            <div class="panel-head"><h2>命中细节</h2></div>
-            <div id="hitDetail" class="detail-empty">暂无选中命中</div>
-          </aside>
+          <section class="panel">
+            <div class="panel-head">
+              <h2>引物库</h2>
+              <button id="newPrimerBtn" type="button">新建引物</button>
+            </div>
+            <div class="table-wrap compact">
+              <table>
+                <thead>
+                  <tr>
+                    <th>name</th>
+                    <th>sequence</th>
+                    <th>Box</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="primerLibraryBody"></tbody>
+              </table>
+            </div>
+          </section>
         </section>
-      </section>
 
-      <section class="view" id="view-library">
         <section class="panel">
           <div class="panel-head">
-            <h2>引物库</h2>
-            <div class="inline-actions">
-              <input id="primerFilter" type="search" placeholder="筛选名称 / 序列 / Box" />
-              <button id="exportCsvBtn" type="button">导出 CSV</button>
-              <button id="exportJsonBtn" type="button">导出 JSON</button>
+            <h2>新增 / 编辑引物</h2>
+            <div class="inline-controls">
+              <button id="mergePrimerPasteBtn" type="button">合并粘贴</button>
+              <button id="replacePrimerPasteBtn" type="button">替换当前引物库</button>
             </div>
           </div>
-          <div class="table-wrap library-table-wrap">
-            <table>
-              <thead><tr><th>name</th><th>sequence 5'-3'</th><th>Box</th><th>Tm</th><th>remarks</th><th></th></tr></thead>
-              <tbody id="primerBody"></tbody>
-            </table>
-          </div>
-          <div class="table-foot" id="primerTableFoot"></div>
+          <form id="primerForm" class="edit-grid">
+            <input id="primerEditId" type="hidden" />
+            <label class="field"><span>name</span><input id="primerName" required /></label>
+            <label class="field"><span>sequence 5'-3'</span><input id="primerSequence" /></label>
+            <label class="field"><span>Box</span><input id="primerBox" /></label>
+            <label class="field"><span>Tm</span><input id="primerTm" /></label>
+            <label class="field wide"><span>remarks</span><textarea id="primerRemarks"></textarea></label>
+            <div class="form-actions">
+              <button class="primary" type="submit">保存引物</button>
+              <button id="deletePrimerBtn" class="danger" type="button">删除</button>
+            </div>
+          </form>
+          <label class="field">
+            <span>从 Excel 粘贴：name / sequence / box / tm / remarks</span>
+            <textarea id="primerPasteBox" class="paste-box" spellcheck="false"></textarea>
+          </label>
         </section>
       </section>
 
-      <section class="view" id="view-update">
-        <div class="update-grid">
-          <section class="panel">
-            <div class="panel-head"><h2>新增 / 编辑</h2><button id="newPrimerBtn" type="button">新建</button></div>
-            <form id="primerForm">
-              <input id="editPrimerId" type="hidden" />
-              <label class="field"><span>name</span><input id="primerName" type="text" required /></label>
-              <label class="field"><span>sequence 5'-3'</span><input id="primerSequence" type="text" /></label>
-              <label class="field"><span>Box</span><input id="primerBox" type="text" /></label>
-              <label class="field"><span>Tm</span><input id="primerTm" type="text" /></label>
-              <label class="field"><span>remarks</span><textarea id="primerRemarks"></textarea></label>
-              <div class="form-actions"><button class="primary" type="submit">保存</button><button id="deletePrimerBtn" class="danger" type="button">删除</button></div>
-            </form>
-          </section>
+      <section class="module" id="plasmidModule">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>质粒搜索</h2>
+              <p>输入基因标签或 DNA 序列，自动查找含有该标签或序列的质粒。</p>
+            </div>
+            <div class="inline-controls">
+              <button id="exportPlasmidJsonBtn" type="button">导出质粒 JSON</button>
+            </div>
+          </div>
+          <label class="field">
+            <span>标签 / 基因名 / 序列</span>
+            <textarea id="plasmidSearchInput" class="query-box" placeholder="例如：ins-1、nCre、GFP、gcy-7p，或粘贴一段 DNA 序列"></textarea>
+          </label>
+          <div class="metric-grid">
+            <div><span>当前质粒</span><strong id="plasmidCount">0</strong></div>
+            <div><span>标签库</span><strong id="tagCount">0</strong></div>
+            <div><span>搜索结果</span><strong id="plasmidHitCount">0</strong></div>
+          </div>
+        </section>
 
+        <section class="grid-2">
           <section class="panel">
             <div class="panel-head">
-              <h2>从 Excel 粘贴</h2>
-              <div class="inline-actions"><button id="mergePasteBtn" type="button">合并更新</button><button id="replacePasteBtn" type="button">替换全部</button></div>
+              <h2>质粒库</h2>
+              <button id="newPlasmidBtn" type="button">新建质粒</button>
             </div>
-            <textarea id="pasteBox" class="paste-box" spellcheck="false"></textarea>
-            <div id="pasteStatus" class="status-line"></div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>质粒名称</th>
+                    <th>标签</th>
+                    <th>长度</th>
+                    <th>位置</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="plasmidBody"></tbody>
+              </table>
+            </div>
           </section>
-
-          <section class="panel github-panel">
+          <section class="panel">
             <div class="panel-head">
-              <h2>发布到 GitHub</h2>
-              <a class="text-link" href="https://github.com/YanWang-whu/Yu-Jin-Lab-Database/blob/main/primer_library.json" target="_blank" rel="noreferrer">查看线上库</a>
+              <h2>匹配详情</h2>
             </div>
-            <label class="field"><span>GitHub token</span><input id="githubToken" type="password" autocomplete="off" placeholder="fine-grained token with Contents: Read and write" /></label>
-            <label class="field"><span>提交说明</span><input id="githubCommitMessage" type="text" value="Update primer library" /></label>
-            <button id="publishGithubBtn" class="primary" type="button">提交当前引物库</button>
-            <div id="githubPublishStatus" class="status-line"></div>
+            <div id="plasmidDetail" class="detail-empty">暂无选中质粒</div>
           </section>
-        </div>
+        </section>
 
         <section class="panel">
-          <div class="panel-head"><h2>库状态</h2><div class="inline-actions"><button id="resetLibraryBtn" type="button">恢复内置库</button></div></div>
-          <div class="metric-grid wide">
-            <div class="metric"><span>总记录</span><strong id="libraryTotal">0</strong></div>
-            <div class="metric"><span>有序列</span><strong id="libraryWithSeq">0</strong></div>
-            <div class="metric"><span>空序列</span><strong id="libraryWithoutSeq">0</strong></div>
-            <div class="metric"><span>来源</span><strong id="librarySource">内置库</strong></div>
+          <div class="panel-head">
+            <h2>上传 / 编辑质粒</h2>
+            <p>支持粘贴或上传 APE / GenBank 文本。系统会根据注释和标签序列库自动打标签。</p>
           </div>
+          <form id="plasmidForm" class="edit-grid">
+            <input id="plasmidEditId" type="hidden" />
+            <label class="field"><span>质粒名称</span><input id="plasmidName" required /></label>
+            <label class="field"><span>位置</span><input id="plasmidLocation" /></label>
+            <label class="field"><span>标签</span><input id="plasmidTags" placeholder="逗号分隔，可自动生成后再修改" /></label>
+            <label class="field"><span>文件</span><input id="plasmidFileInput" type="file" accept=".ape,.gb,.gbk,.txt,.dna" /></label>
+            <label class="field wide"><span>序列 / APE / GenBank</span><textarea id="plasmidSequenceText" class="sequence-box"></textarea></label>
+            <label class="field wide"><span>备注</span><textarea id="plasmidRemarks"></textarea></label>
+            <div class="form-actions">
+              <button id="autoTagPlasmidBtn" type="button">自动识别标签</button>
+              <button class="primary" type="submit">保存质粒</button>
+              <button id="deletePlasmidBtn" class="danger" type="button">删除</button>
+            </div>
+          </form>
+        </section>
+      </section>
+
+      <section class="module" id="strainModule">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>品系库</h2>
+              <p>搜索 Strain、Genotype、描述、box、位置和冻存信息。</p>
+            </div>
+            <button id="exportStrainJsonBtn" type="button">导出品系 JSON</button>
+          </div>
+          <label class="field">
+            <span>搜索</span>
+            <input id="strainSearchInput" type="search" placeholder="基因名 / 描述 / box / location" />
+          </label>
+          <div class="metric-grid">
+            <div><span>当前品系</span><strong id="strainCount">0</strong></div>
+            <div><span>搜索结果</span><strong id="strainHitCount">0</strong></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>品系列表</h2>
+            <button id="newStrainBtn" type="button">新品系</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Strain</th>
+                  <th>Genotype</th>
+                  <th>short description</th>
+                  <th>box</th>
+                  <th>Location</th>
+                  <th>冻存日期</th>
+                  <th>剩余管数</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="strainBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>新增 / 编辑品系</h2>
+            <div class="inline-controls">
+              <button id="mergeStrainPasteBtn" type="button">合并粘贴</button>
+              <button id="replaceStrainPasteBtn" type="button">替换当前品系库</button>
+            </div>
+          </div>
+          <form id="strainForm" class="edit-grid">
+            <input id="strainEditId" type="hidden" />
+            <label class="field"><span>Strain</span><input id="strainName" required /></label>
+            <label class="field"><span>Genotype</span><input id="strainGenotype" /></label>
+            <label class="field"><span>short description</span><input id="strainDescription" /></label>
+            <label class="field"><span>box</span><input id="strainBox" /></label>
+            <label class="field"><span>Location</span><input id="strainLocation" /></label>
+            <label class="field"><span>冻存日期</span><input id="strainFrozenDate" /></label>
+            <label class="field"><span>剩余管数</span><input id="strainTubeLeft" /></label>
+            <div class="form-actions">
+              <button class="primary" type="submit">保存品系</button>
+              <button id="deleteStrainBtn" class="danger" type="button">删除</button>
+            </div>
+          </form>
+          <label class="field">
+            <span>从 Excel 粘贴：Strain / Genotype / short description / box / Location / 冻存日期 / 剩余管数</span>
+            <textarea id="strainPasteBox" class="paste-box" spellcheck="false"></textarea>
+          </label>
         </section>
       </section>
     </main>
