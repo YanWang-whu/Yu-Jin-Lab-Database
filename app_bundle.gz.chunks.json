@@ -1,0 +1,7 @@
+{
+  "compression": "gzip",
+  "files": [
+    "app_bundle.gz.00.b64",
+    "app_bundle.gz.01.b64"
+  ]
+}
