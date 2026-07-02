@@ -5,13 +5,23 @@
     return decodeURIComponent(escape(atob(text.trim())));
   }
 
-  fetch("app_bundle.b64", { cache: "no-store" })
-    .then(function (response) {
-      if (!response.ok) throw new Error("Cannot load app bundle: " + response.status);
+  function fetchText(path) {
+    return fetch(path, { cache: "no-store" }).then(function (response) {
+      if (!response.ok) throw new Error("Cannot load " + path + ": " + response.status);
       return response.text();
+    });
+  }
+
+  fetch("app_bundle.chunks.json", { cache: "no-store" })
+    .then(function (response) {
+      if (!response.ok) throw new Error("Cannot load app manifest: " + response.status);
+      return response.json();
     })
-    .then(function (bundle) {
-      (0, eval)(decodeBase64Utf8(bundle));
+    .then(function (manifest) {
+      return Promise.all((manifest.files || []).map(fetchText));
+    })
+    .then(function (chunks) {
+      (0, eval)(decodeBase64Utf8(chunks.join("")));
     })
     .catch(function (error) {
       var node = document.getElementById("statusLine");
