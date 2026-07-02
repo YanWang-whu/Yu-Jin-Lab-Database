@@ -1,43 +1,46 @@
 # Yu-Jin Lab Database
 
-Yu-Jin Lab 引物匹配网站。这个仓库已经包含完整的静态网页文件和共享引物库。
-
-公开网站地址，已经可以访问：
+Public web app:
 
 https://yanwang-whu.github.io/Yu-Jin-Lab-Database/
 
-如果将来上面的地址显示 404，通常说明 GitHub Pages 发布设置被关闭或工作流失败，可按 [ENABLE_GITHUB_PAGES.md](ENABLE_GITHUB_PAGES.md) 排查。
+## Current Data
 
-## 引物匹配工具
+- Yu Lab: primers, plasmids, strains
+- Jin Lab: primers, plasmids
+- Yu primers: 118 records
+- Yu plasmids: 6 records imported from ApE / GenBank files
+- Yu strains: 151 records merged from worm stock spreadsheets
+- Tag library: 14 feature tags for automatic plasmid annotation
+- Jin primer and plasmid libraries are currently empty placeholders
 
-网站可以帮助实验室成员：
+## Use
 
-- 粘贴 DNA/FASTA 序列并查找匹配引物；
-- 查看引物结合方向和 1-based 坐标；
-- 允许 0、1 或 2 个错配；
-- 添加、编辑、删除、批量粘贴、导出并提交引物库更新。
+1. Open the GitHub Pages link.
+2. Choose `Yu Lab` or `Jin Lab`.
+3. Choose `引物`, `质粒`, or `品系`.
+4. Primer view can match pasted DNA / FASTA sequences and edit primer records.
+5. Plasmid view can search by tag, gene name, or DNA sequence, and can import `.ape`, `.gb`, `.gbk`, `.txt`, or `.dna` text files.
+6. Strain view can search and edit strain, genotype, description, box, location, frozen date, and remaining tube count.
 
-共享在线引物库文件：
+## Updating Online Data
 
-`primer_library.json`
+The app can write database updates back to this repository from the browser.
 
-便于人工查看和下载的 CSV 文件：
+1. Create a fine-grained GitHub token for this repository.
+2. Give it `Contents: Read and write`.
+3. Paste the token into the top-right token box.
+4. Edit the database in the web page.
+5. Click `提交当前数据库`.
 
-`primer_library.csv`
+The token is only used in the browser for that GitHub API request. The web page does not save it.
 
-## 实验室成员如何更新在线引物库
+Large libraries are stored as compressed chunk files:
 
-1. 打开网站。
-2. 进入 `更新` 页面。
-3. 从 Excel 粘贴引物，或直接在网页中编辑引物。
-4. 创建一个只给本仓库使用的 fine-grained GitHub token，并授予 `Contents: Read and write` 权限。
-5. 把 token 粘贴到网页里的 `GitHub token` 输入框。
-6. 点击 `提交当前引物库`。
+- `tag_library.gz.chunks.json`
+- `yu_plasmid_library.gz.chunks.json`
+- `yu_strain_library.gz.chunks.json`
+- `jin_primer_library.gz.chunks.json`
+- `jin_plasmid_library.gz.chunks.json`
 
-Token 只会在使用者自己的浏览器中用于这一次 GitHub API 请求，网页不会保存 token。
-
-没有仓库写入权限的成员也可以导出 CSV/JSON，再发给仓库维护者代为更新。
-
-## GitHub Pages
-
-本仓库包含 `.github/workflows/pages.yml`，用于把仓库根目录的静态网页发布到 GitHub Pages。Pages 已设置为由 GitHub Actions 发布；之后每次更新 `main` 分支都会自动发布。
+`primer_library.json` remains a normal JSON file.
